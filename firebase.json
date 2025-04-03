@@ -1,0 +1,52 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kinksme-a9c9d",
+          "appId": "1:687049583687:android:35997035c0b65a58e3d562",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kinksme-a9c9d",
+          "configurations": {
+            "android": "1:687049583687:android:35997035c0b65a58e3d562",
+            "ios": "1:687049583687:ios:e58ba7c0c7e8ebc6e3d562",
+            "macos": "1:687049583687:ios:e58ba7c0c7e8ebc6e3d562",
+            "web": "1:687049583687:web:809fef28eac9def7e3d562"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  }
+}

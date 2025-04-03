@@ -1,0 +1,101 @@
+name: kinksme
+
+description: "Application Kink’s Me - Rencontre BDSM sécurisée"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Firebase & Google (compatibilité vérifiée)
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  cloud_firestore: ^5.6.5
+  firebase_messaging: ^15.2.4
+  firebase_storage: ^12.4.4
+  firebase_app_check: ^0.3.2+4
+
+  # Géolocalisation & Maps
+  google_maps_flutter: ^2.6.0
+  geolocator: ^13.0.3
+  geocoding: ^3.0.0
+
+  # UI & Design
+  provider: ^6.1.2
+  flutter_svg: ^2.0.10+1
+  font_awesome_flutter: ^10.7.0
+  signature: ^6.0.0
+  flutter_local_notifications: ^19.0.0
+
+  # Outils
+  image_picker: ^1.0.8
+  shared_preferences: ^2.3.0
+  intl: ^0.19.0
+  flutter_quill: ^11.2.0
+
+  # 🔥 Supprimé temporairement (voir doc pour réintégration future)
+  # no_screenshot: ^0.3.1
+
+  # Intégré via pub.dev (⚠️ vérifier compatibilité future)
+  firebase_data_connect: ^0.1.3+2
+
+  # Compatible avec l'environnement Flutter
+  window_manager: ^0.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fond.png
+    - assets/dominant.png
+    - assets/soumis.png
+    - assets/inscription.png
+    - assets/logo.png
+    - assets/presentation.png
+    - assets/switch.png
+    - assets/fondglossaire.png
+    - assets/grimoire.png
+    - assets/fondchat.png
+    - assets/leboudoirdesecrits.png
+    - assets/agenda.png
+    - assets/fondagenda.png
+    - assets/fondforge.png
+    - assets/laforge.png
+    - assets/fondboudoir.png
+    - assets/murmure.png
+    - assets/boussole.png
+    - assets/monjournalbrulant.png
+    - assets/fondhome.png
+    - assets/missive.png
+    - assets/parchemin.png
+    - assets/ecritvintage.png
+    - assets/feuilleclassique.png
+    - assets/voiledesoie.png
+    - assets/parchemindantan.png
+    - assets/soieardente.png
+    - assets/rouleauscelle.png
+    - assets/fondmissive.png
+    - assets/fondjournal.png
+    - assets/kinksphere.png
+    - assets/fondkinksphere.png
+    - assets/fondcercle.png
+    - assets/cercle.png
+    - assets/kinkseal.png
+    - assets/fondkinkseal.png
+    - assets/plansite.png
+    - assets/fondplansite.png
+
+  fonts:
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/DancingScript-VariableFont_wght.ttf

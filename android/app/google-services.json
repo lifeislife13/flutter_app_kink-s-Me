@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "687049583687",
+    "firebase_url": "https://kinksme-a9c9d-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "kinksme-a9c9d",
+    "storage_bucket": "kinksme-a9c9d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:687049583687:android:35997035c0b65a58e3d562",
+        "android_client_info": {
+          "package_name": "com.example.kinksme"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "687049583687-bbnhber8o5cutc5glteeb4buf6jg9d40.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kinksme",
+            "certificate_hash": "02a285b559eb1314d92dbc968d822720c43e03e1"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLr5lAjd9zvRiD7aPOpNfIwMdpJ3kseiM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
