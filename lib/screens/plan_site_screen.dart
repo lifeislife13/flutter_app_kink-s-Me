@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PlanDuSiteScreen extends StatelessWidget {
   const PlanDuSiteScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bool isLoggedIn = FirebaseAuth.instance.currentUser != null;
+
     final List<Map<String, dynamic>> sections = [
       {'label': "Accueil (Home)", 'route': '/home', 'emoji': "🏠"},
-      {'label': "Inscription", 'route': '/register', 'emoji': "🧾"},
+      if (!isLoggedIn)
+        {'label': "Inscription", 'route': '/register', 'emoji': "🧾"},
       {'label': "Présentation", 'route': '/presentation', 'emoji': "📖"},
       {
         'label': "Configuration Profil",
@@ -19,6 +23,30 @@ class PlanDuSiteScreen extends StatelessWidget {
         'route': '/about',
         'emoji': "📜",
       },
+      if (isLoggedIn)
+        {
+          'label': "Se déconnecter",
+          'route': null,
+          'emoji': "🚪",
+        },
+      if (isLoggedIn)
+        {
+          'label': "Feedback",
+          'route': '/feedback',
+          'emoji': "📝",
+        },
+      if (isLoggedIn)
+        {
+          'label': "Crédits Images & Ressources",
+          'route': '/credits',
+          'emoji': "💬",
+        },
+      if (isLoggedIn)
+        {
+          'label': "Mon Compte",
+          'route': '/account',
+          'emoji': "👤",
+        },
     ];
 
     return Scaffold(
@@ -72,10 +100,57 @@ class PlanDuSiteScreen extends StatelessWidget {
                       Icons.arrow_forward_ios,
                       color: Colors.white70,
                     ),
-                    onTap: () {
-                      Navigator.pushNamed(context, item['route']).then((_) {
-                        Navigator.pushReplacementNamed(context, '/planSite');
-                      });
+                    onTap: () async {
+                      if (item['label'] == "Se déconnecter") {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: Colors.black,
+                            title: const Text(
+                              "Confirmer la déconnexion",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            content: const Text(
+                              "Souhaitez-vous vraiment vous déconnecter ?",
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text("Annuler",
+                                    style: TextStyle(color: Colors.grey)),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text("Se déconnecter",
+                                    style: TextStyle(color: Colors.redAccent)),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true) {
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/login',
+                              (_) => false,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Déconnexion réussie"),
+                                backgroundColor: Colors.redAccent,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
+                      } else {
+                        Navigator.pushNamed(context, item['route']);
+                      }
                     },
                   ),
                 );

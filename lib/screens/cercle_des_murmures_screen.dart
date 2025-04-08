@@ -12,8 +12,7 @@ class _CercleDesMurmuresScreenState extends State<CercleDesMurmuresScreen> {
   final TextEditingController _postController = TextEditingController();
   final List<_MurPost> _posts = [];
 
-  bool isFemaleUser =
-      true; // À ajuster dynamiquement selon le profil utilisateur
+  bool isFemaleUser = true; // À ajuster dynamiquement
 
   @override
   void dispose() {
@@ -84,21 +83,47 @@ class _CercleDesMurmuresScreenState extends State<CercleDesMurmuresScreen> {
                 ),
               ),
               Expanded(
-                child:
-                    _posts.isEmpty
-                        ? const Center(
-                          child: Text(
-                            "Aucun murmure pour l'instant.",
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        )
-                        : ListView.builder(
-                          itemCount: _posts.length,
-                          itemBuilder: (ctx, i) {
-                            final post = _posts[i];
-                            return _buildPostItem(post);
-                          },
+                child: _posts.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "Aucun murmure pour l'instant.",
+                          style: TextStyle(color: Colors.white70),
                         ),
+                      )
+                    : ListView.builder(
+                        itemCount: _posts.length,
+                        itemBuilder: (ctx, i) {
+                          final post = _posts[i];
+                          return _buildPostItem(post);
+                        },
+                      ),
+              ),
+              // ✅ Le bouton magique bien placé !
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/highlightedKinks');
+                  },
+                  icon: const Icon(Icons.stars, color: Colors.amber),
+                  label: const Text(
+                    "✨ Voir les Kink Élégants",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: const BorderSide(color: Colors.amber),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
+                  ),
+                ),
               ),
             ],
           ),

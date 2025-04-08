@@ -146,6 +146,14 @@ class ProfileMenuScreen extends StatelessWidget {
                 label: "Kink Élégance",
                 route: '/kinkElegance',
               ),
+              // Bouton Mon Compte
+              _buildMenuButton(
+                context: context,
+                asset: 'assets/moncompte.png',
+                label: "Mon Compte",
+                route: '/account',
+              ),
+
               // Bouton Plan du site
               _buildMenuButton(
                 context: context,

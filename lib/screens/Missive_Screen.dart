@@ -1,17 +1,19 @@
-// missive_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:kinksme/models/message_style.dart'; // Import centralisé de l'enum
+import 'package:kinksme/models/message_style.dart';
 
 class MissiveScreen extends StatefulWidget {
   final String message;
   final String signature;
   final MessageStyle style;
+  final String? manualSignatureBase64;
 
   const MissiveScreen({
     super.key,
     required this.message,
     required this.signature,
     this.style = MessageStyle.parcheminDAntan,
+    this.manualSignatureBase64,
   });
 
   @override
@@ -41,64 +43,22 @@ class _MissiveScreenState extends State<MissiveScreen>
     super.dispose();
   }
 
-  BoxDecoration _buildDecoration(MessageStyle style) {
-    switch (style) {
-      case MessageStyle.parcheminDAntan:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/parchemaindantan.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.feuilleClassique:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/feuilleclassique.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.voileDeSoie:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/voiledesoie.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.rouleauScelle:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/rouleauscelle.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.ecritVintage:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/ecritvintage.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.soieArdente:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/soieardente.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      default:
-        return const BoxDecoration(color: Colors.white);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final decoration = BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage(widget.style.assetPath),
+        fit: BoxFit.cover,
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Missive"),
         backgroundColor: Colors.black,
       ),
       body: Container(
-        decoration: _buildDecoration(widget.style),
+        decoration: decoration,
         child: GestureDetector(
           onTap: () {
             setState(() {
@@ -138,22 +98,28 @@ class _MissiveScreenState extends State<MissiveScreen>
                   ],
                 ),
                 const SizedBox(height: 16),
-                _showSignature
-                    ? Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        widget.signature,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    )
-                    : const Text(
-                      "Touchez pour révéler la signature",
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                if (_showSignature)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: widget.manualSignatureBase64 != null
+                        ? Image.memory(
+                            base64Decode(widget.manualSignatureBase64!),
+                            height: 60,
+                          )
+                        : Text(
+                            widget.signature,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                  )
+                else
+                  const Text(
+                    "Touchez pour révéler la signature",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
               ],
             ),
           ),

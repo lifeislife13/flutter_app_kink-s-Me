@@ -168,10 +168,9 @@ class _ChatAndMessagingScreenState extends State<ChatAndMessagingScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage:
-                  widget.userPhoto.isNotEmpty
-                      ? NetworkImage(widget.userPhoto)
-                      : const AssetImage('assets/avatar.png') as ImageProvider,
+              backgroundImage: widget.userPhoto.isNotEmpty
+                  ? NetworkImage(widget.userPhoto)
+                  : const AssetImage('assets/avatar.png') as ImageProvider,
             ),
             const SizedBox(width: 10),
             Text(widget.userPseudo),
@@ -185,6 +184,33 @@ class _ChatAndMessagingScreenState extends State<ChatAndMessagingScreen> {
           ),
           Column(
             children: [
+              //// ✅ Ton bouton juste ici
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/highlightedKinks');
+                  },
+                  icon: const Icon(Icons.stars, color: Colors.amber),
+                  label: const Text(
+                    "✨ Voir les Kink Élégants",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: const BorderSide(color: Colors.amber),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
+                  ),
+                ),
+              ),
               Expanded(
                 child: ListView(
                   controller: _scrollController,

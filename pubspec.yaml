@@ -7,7 +7,6 @@ version: 1.0.0+1
 environment:
   sdk: ">=2.17.0 <4.0.0"
 
-
 dependencies:
   flutter:
     sdk: flutter
@@ -32,6 +31,7 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   signature: ^6.0.0
   flutter_local_notifications: ^19.0.0
+  google_fonts: ^6.1.0
 
   # Outils
   image_picker: ^1.0.8
@@ -42,10 +42,7 @@ dependencies:
   # 🔥 Supprimé temporairement (voir doc pour réintégration future)
   # no_screenshot: ^0.3.1
 
-  # Intégré via pub.dev (⚠️ vérifier compatibilité future)
   firebase_data_connect: ^0.1.3+2
-
-  # Compatible avec l'environnement Flutter
   window_manager: ^0.4.3
 
 dev_dependencies:
@@ -55,6 +52,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/fond.png
     - assets/dominant.png
@@ -94,8 +92,28 @@ flutter:
     - assets/fondkinkseal.png
     - assets/plansite.png
     - assets/fondplansite.png
+    - assets/parcheminantique.png
+    - assets/veloursnoir.png
+    - assets/feuilleor.png
+    - assets/plumerouge.png
+    - assets/shibari.png
+    - assets/chaine.png
+    - assets/collier.png
+    - assets/moncompte.png
+    - assets/fondmoncompte.png
+    - assets/avatar.png
 
   fonts:
     - family: DancingScript
       fonts:
         - asset: assets/fonts/DancingScript-VariableFont_wght.ttf
+    - family: AmaticSC
+      fonts:
+        - asset: assets/fonts/AmaticSC-Regular.ttf
+        - asset: assets/fonts/AmaticSC-Bold.ttf
+    - family: GreatVibes
+      fonts:
+        - asset: assets/fonts/GreatVibes-Regular.ttf
+    - family: Pacifico
+      fonts:
+        - asset: assets/fonts/Pacifico-Regular.ttf

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kinksme/models/message_style.dart';
+import 'package:kinksme/widgets/personnalisation_dialog.dart';
 
 class JournalBrulantScreen extends StatefulWidget {
   const JournalBrulantScreen({super.key});
@@ -13,36 +14,60 @@ class JournalBrulantScreen extends StatefulWidget {
 class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
   final TextEditingController _controller = TextEditingController();
 
-  // On garde un style par défaut (plus de personnalisation).
   MessageStyle selectedStyle = MessageStyle.voileDeSoie;
-
-  // Signature “par défaut”
   String customSignature = "Votre signature ici...";
   String? manualSignatureBase64;
 
+  bool isPremium = false;
+  bool autoPublish = false;
+
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+    _checkAutoPublishStatus();
   }
 
-  /// Sauvegarde le texte sans le publier
+  Future<void> _checkPremiumStatus() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    if (doc.exists && doc.data()!.containsKey('isPremium')) {
+      setState(() {
+        isPremium = doc['isPremium'] == true;
+      });
+    }
+
+    setState(() {});
+  }
+
+  Future<void> _checkAutoPublishStatus() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    if (doc.exists && doc.data()!.containsKey('autoPublish')) {
+      setState(() {
+        autoPublish = doc['autoPublish'] == true;
+      });
+    }
+  }
+
   Future<void> _saveJournalToFirestore() async {
     final journalText = _controller.text.trim();
     if (journalText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Le journal est vide")));
+      _showSnackbar("Le journal est vide");
       return;
     }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vous devez être connecté pour sauvegarder"),
-        ),
-      );
+      _showSnackbar("Vous devez être connecté pour sauvegarder");
       return;
     }
 
@@ -56,74 +81,21 @@ class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
         'manualSignatureBase64': manualSignatureBase64,
         'isPublished': false,
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Journal sauvegardé")));
+
+      _showSnackbar("Journal sauvegardé 🔥");
     } catch (e) {
       print("Erreur journal -> $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Erreur de sauvegarde")));
+      _showSnackbar("Erreur de sauvegarde");
     }
   }
 
-  /// Publication dans le Boudoir + navigation auto vers l’onglet Communauté
-  Future<void> _publishToBoudoir() async {
+  Future<void> _openPlumeSecrete() async {
     final journalText = _controller.text.trim();
     if (journalText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez écrire dans le journal")),
-      );
+      _showSnackbar("Veuillez écrire dans le journal");
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vous devez être connecté pour publier")),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance.collection('boudoirEcrits').add({
-        'text': journalText,
-        'userId': user.uid,
-        'timestamp': FieldValue.serverTimestamp(),
-        'style': selectedStyle.toString(),
-        'signature': customSignature,
-        'manualSignatureBase64': manualSignatureBase64,
-        // isPublished = true ou non ?
-        // (Selon ta logique, tu peux l'ajouter si nécessaire)
-      });
-
-      // --- NAVIGATION vers Boudoir, onglet “Communauté” ---
-      Navigator.pushNamed(
-        context,
-        '/boudoir',
-        arguments: {'initialTab': 'communautaire'},
-      );
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Publié dans le Boudoir")));
-    } catch (e) {
-      print("Erreur publication -> $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erreur lors de la publication")),
-      );
-    }
-  }
-
-  /// Ouvrir l’écran Plume Secrète (si tu souhaites garder cette fonctionnalité)
-  void _openPlumeSecrete() {
-    final journalText = _controller.text.trim();
-    if (journalText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez écrire dans le journal")),
-      );
-      return;
-    }
     Navigator.pushNamed(
       context,
       '/plumeSecrete',
@@ -136,6 +108,69 @@ class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
     );
   }
 
+  Future<void> _goToMiseEnBeaute() async {
+    final journalText = _controller.text.trim();
+    if (journalText.isEmpty) {
+      _showSnackbar("Veuillez écrire dans le journal");
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    if (autoPublish) {
+      await FirebaseFirestore.instance.collection('boudoirEcrits').add({
+        'title': journalText.split('\n').first,
+        'text': journalText,
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+        'style': selectedStyle.toString(),
+        'signature': customSignature,
+        'manualSignatureBase64': manualSignatureBase64,
+        'font': 'Georgia',
+        'isValidated': true,
+      });
+
+      _showSnackbar("Publié dans le Boudoir ✨");
+
+      Navigator.pushNamed(context, '/boudoir', arguments: {
+        'initialTab': 'communautaire',
+      });
+    } else {
+      Navigator.pushNamed(context, '/boudoirEditor', arguments: {
+        'text': journalText,
+        'signature': customSignature,
+        'style': selectedStyle.toString(),
+        'manualSignatureBase64': manualSignatureBase64,
+      });
+    }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _openPersonnalisationDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => PersonnalisationDialog(
+        isPremium: isPremium,
+        initialStyle: selectedStyle,
+        initialSignature: customSignature,
+        initialManualSignatureBase64: manualSignatureBase64,
+        onConfirmed: (signatureText, style, signatureImage) {
+          setState(() {
+            customSignature = signatureText;
+            selectedStyle = style;
+            manualSignatureBase64 = signatureImage;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,15 +179,21 @@ class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
         backgroundColor: Colors.black,
         actions: [
           IconButton(
+            onPressed: _openPersonnalisationDialog,
+            icon: const Icon(Icons.palette, color: Colors.redAccent),
+            tooltip: "🎨 Personnaliser",
+          ),
+          IconButton(
             onPressed: _saveJournalToFirestore,
-            icon: const Icon(Icons.cloud_upload),
+            icon: const Icon(Icons.cloud_upload, color: Colors.redAccent),
+            tooltip: "Sauvegarder",
           ),
         ],
       ),
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset("assets/fondjournal.png", fit: BoxFit.cover),
+            child: Image.asset(selectedStyle.assetPath, fit: BoxFit.cover),
           ),
           Column(
             children: [
@@ -163,45 +204,25 @@ class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
                     controller: _controller,
                     maxLines: null,
                     expands: true,
-                    style: const TextStyle(fontSize: 22, color: Colors.white),
+                    style: const TextStyle(fontSize: 20, color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: "Écris ici ton journal brûlant...",
                       hintStyle: TextStyle(color: Colors.white70),
-                      border: OutlineInputBorder(borderSide: BorderSide.none),
                       filled: true,
                       fillColor: Colors.black54,
+                      border: OutlineInputBorder(borderSide: BorderSide.none),
                     ),
                   ),
                 ),
               ),
               Container(
-                color: Colors.black54,
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                color: Colors.black87,
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Personnalisation supprimée :
-                    // ElevatedButton(
-                    //   onPressed: _openCustomizationDialog,
-                    //   style: ElevatedButton.styleFrom(
-                    //     backgroundColor: Colors.red,
-                    //   ),
-                    //   child: const Text("Personnaliser"),
-                    // ),
-                    ElevatedButton(
-                      onPressed: _openPlumeSecrete,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text("Plume Secrète"),
-                    ),
-                    ElevatedButton(
-                      onPressed: _publishToBoudoir,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text("Publier"),
-                    ),
+                    _buildBottomButton("Plume Secrète", _openPlumeSecrete),
+                    _buildBottomButton("Mise en beauté ✨", _goToMiseEnBeaute),
                   ],
                 ),
               ),
@@ -209,6 +230,20 @@ class _JournalBrulantScreenState extends State<JournalBrulantScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBottomButton(String label, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.redAccent,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
     );
   }
 }

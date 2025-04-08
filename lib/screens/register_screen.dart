@@ -1,36 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kinksme/screens/presentation_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kinksme/screens/presentation_screen.dart';
 import 'dart:developer' as dev;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  int selectedRole = -1;
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passCtrl = TextEditingController();
   final TextEditingController _confirmCtrl = TextEditingController();
 
-  // Les booléens pour masquer/afficher les mots de passe
-  bool _obscurePass = true; // pour le champ “Mot de passe”
-  bool _obscureConfirm = true; // pour le champ “Confirmer le mot de passe”
-
   String errorMessage = '';
+  int selectedRole = -1;
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
   final Color deepRed = const Color.fromARGB(255, 152, 5, 5);
 
-  // Méthode d’inscription
+  String selectedGenre = '';
+
   Future<void> _handleRegister() async {
     setState(() => errorMessage = '');
+
     final email = _emailCtrl.text.trim();
-    final pass = _passCtrl.text;
-    final confirm = _confirmCtrl.text;
+    final pass = _passCtrl.text.trim();
+    final confirm = _confirmCtrl.text.trim();
 
     if (email.isEmpty || pass.isEmpty || confirm.isEmpty) {
       setState(() => errorMessage = "Tous les champs sont obligatoires.");
@@ -42,8 +42,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (selectedRole < 0 || selectedRole > 2) {
-      setState(() => errorMessage = "Veuillez sélectionner un rôle.");
+    if (selectedRole == -1) {
+      setState(() => errorMessage = "Veuillez choisir un rôle.");
+      return;
+    }
+
+    if (selectedGenre.isEmpty) {
+      setState(() => errorMessage = "Veuillez indiquer votre genre.");
       return;
     }
 
@@ -52,12 +57,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
           .createUserWithEmailAndPassword(email: email, password: pass);
       final uid = userCredential.user?.uid;
 
+      // ✅ Envoi de l'e-mail de vérification
+      if (userCredential.user != null && !userCredential.user!.emailVerified) {
+        await userCredential.user!.sendEmailVerification();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "📧 Un email de vérification a été envoyé. Vérifiez votre boîte mail.",
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+
       if (uid != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        final userDoc = {
           'email': email,
           'role': selectedRole,
+          'genre': selectedGenre,
           'createdAt': FieldValue.serverTimestamp(),
-        });
+        };
+
+        if (selectedGenre.toLowerCase() == "femme") {
+          userDoc['isPremium'] = true;
+          userDoc['premiumUntil'] = Timestamp.fromDate(
+            DateTime.now().add(const Duration(days: 7)),
+          );
+        } else {
+          userDoc['isPremium'] = false;
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set(userDoc);
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('seenPresentation', true);
@@ -66,30 +103,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const PresentationScreen()),
+          MaterialPageRoute(builder: (_) => const PresentationScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
       setState(() => errorMessage = e.message ?? "Erreur inconnue.");
       dev.log("Firebase Auth Error: ${e.message}", name: "Register");
     } catch (e) {
-      setState(() => errorMessage = "Erreur inattendue. Veuillez réessayer.");
-      dev.log("Unknown error: $e", name: "Register");
+      setState(() => errorMessage = "Erreur inattendue.");
+      dev.log("Erreur: $e", name: "Register");
     }
   }
 
-  Widget _buildRoleButton({
-    required String imagePath,
-    required String label,
-    required int roleValue,
-  }) {
-    bool isSelected = (selectedRole == roleValue);
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool isPassword = false}) {
+    bool isConfirm = label.toLowerCase().contains("confirmer");
+    bool obscure = isConfirm ? _obscureConfirm : _obscurePass;
+
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? obscure : false,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.6),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscure ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white70,
+                ),
+                onPressed: () {
+                  setState(() {
+                    if (isConfirm) {
+                      _obscureConfirm = !_obscureConfirm;
+                    } else {
+                      _obscurePass = !_obscurePass;
+                    }
+                  });
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildRoleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildRoleOption("assets/dominant.png", "Dominant", 0),
+        const SizedBox(width: 20),
+        _buildRoleOption("assets/soumis.png", "Soumis", 1),
+        const SizedBox(width: 20),
+        _buildRoleOption("assets/switch.png", "Switch", 2),
+      ],
+    );
+  }
+
+  Widget _buildRoleOption(String img, String label, int value) {
+    bool isSelected = selectedRole == value;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedRole = roleValue;
-        });
-      },
+      onTap: () => setState(() => selectedRole = value),
       child: Column(
         children: [
           Container(
@@ -97,187 +175,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
             height: 75,
             decoration: BoxDecoration(
               border: Border.all(
-                color: isSelected ? deepRed : Colors.white,
-                width: 3,
-              ),
+                  color: isSelected ? deepRed : Colors.white, width: 3),
               borderRadius: BorderRadius.circular(10),
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.cover,
-              ),
+              image: DecorationImage(image: AssetImage(img), fit: BoxFit.cover),
             ),
           ),
           const SizedBox(height: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? deepRed : Colors.white,
-              fontSize: 16,
-            ),
-          ),
+          Text(label,
+              style: TextStyle(color: isSelected ? deepRed : Colors.white)),
         ],
       ),
     );
   }
 
-  // --- CORRECTION : on utilise _obscurePass / _obscureConfirm ---
-  Widget _buildTextField(String hint, {bool isPassword = false}) {
-    late TextEditingController controller;
-    if (hint.contains("Email")) {
-      controller = _emailCtrl;
-    } else if (hint.contains("Confirmer")) {
-      controller = _confirmCtrl;
-    } else {
-      controller = _passCtrl;
-    }
-
-    return SizedBox(
-      width: double.infinity,
-      child: TextField(
-        controller: controller,
-        // On choisit la bonne variable pour "obscureText"
-        obscureText:
-            isPassword
-                ? (hint.contains("Confirmer") ? _obscureConfirm : _obscurePass)
-                : false,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Colors.black.withOpacity(0.6),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 15,
-            vertical: 15,
-          ),
-          suffixIcon:
-              isPassword
-                  ? IconButton(
-                    icon: Icon(
-                      (hint.contains("Confirmer")
-                              ? _obscureConfirm
-                              : _obscurePass)
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      color: Colors.white70,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        if (hint.contains("Confirmer")) {
-                          _obscureConfirm = !_obscureConfirm;
-                        } else {
-                          _obscurePass = !_obscurePass;
-                        }
-                      });
-                    },
-                  )
-                  : null,
-        ),
+  Widget _buildGenderSelector() {
+    return DropdownButtonFormField<String>(
+      value: selectedGenre.isEmpty ? null : selectedGenre,
+      dropdownColor: Colors.black,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: "Genre",
+        labelStyle: const TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.6),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
+      items: const [
+        DropdownMenuItem(value: "femme", child: Text("Femme")),
+        DropdownMenuItem(value: "homme", child: Text("Homme")),
+        DropdownMenuItem(value: "non-binaire", child: Text("Non-binaire")),
+        DropdownMenuItem(value: "autre", child: Text("Autre")),
+      ],
+      onChanged: (value) => setState(() => selectedGenre = value ?? ''),
     );
   }
-  // --- FIN CORRECTION ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/inscription.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
+          Positioned.fill(
+            child: Image.asset("assets/inscription.png", fit: BoxFit.cover),
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
               child: Column(
                 children: [
                   const Text(
                     "Rejoignez-nous",
                     style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 30),
-                  _buildTextField("Email"),
+                  _buildTextField("Email", _emailCtrl),
                   const SizedBox(height: 15),
-                  _buildTextField("Mot de passe", isPassword: true),
+                  _buildTextField("Mot de passe", _passCtrl, isPassword: true),
                   const SizedBox(height: 15),
-                  _buildTextField(
-                    "Confirmer le mot de passe",
-                    isPassword: true,
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildRoleButton(
-                        imagePath: "assets/dominant.png",
-                        label: "Dominant",
-                        roleValue: 0,
-                      ),
-                      const SizedBox(width: 20),
-                      _buildRoleButton(
-                        imagePath: "assets/soumis.png",
-                        label: "Soumis",
-                        roleValue: 1,
-                      ),
-                      const SizedBox(width: 20),
-                      _buildRoleButton(
-                        imagePath: "assets/switch.png",
-                        label: "Switch",
-                        roleValue: 2,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
+                  _buildTextField("Confirmer le mot de passe", _confirmCtrl,
+                      isPassword: true),
+                  const SizedBox(height: 20),
+                  _buildGenderSelector(),
+                  const SizedBox(height: 20),
+                  _buildRoleSelector(),
+                  const SizedBox(height: 25),
                   ElevatedButton(
                     onPressed: _handleRegister,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: deepRed,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 50,
-                        vertical: 15,
-                      ),
+                          horizontal: 40, vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text(
-                      "S'inscrire",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                    child: const Text("S'inscrire",
+                        style: TextStyle(fontSize: 18, color: Colors.white)),
                   ),
                   const SizedBox(height: 20),
                   if (errorMessage.isNotEmpty)
-                    Text(
-                      errorMessage,
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 255, 90, 90),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(errorMessage,
+                        style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold)),
                   const SizedBox(height: 40),
-                  const Text(
-                    "Kink’s Me",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 142, 6, 6),
-                    ),
-                  ),
+                  const Text("Kink’s Me",
+                      style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18)),
                 ],
               ),
             ),

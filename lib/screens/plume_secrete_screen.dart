@@ -1,4 +1,3 @@
-// plume_secrete_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kinksme/models/message_style.dart';
@@ -44,61 +43,12 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
     super.dispose();
   }
 
-  BoxDecoration _buildDecoration() {
-    switch (widget.style) {
-      case MessageStyle.parcheminDAntan:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/parchemaindantan.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.feuilleClassique:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/feuilleclassique.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.voileDeSoie:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/voiledesoie.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.rouleauScelle:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/rouleauscelle.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.ecritVintage:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/ecritvintage.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      case MessageStyle.soieArdente:
-        return const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/soieardente.png"),
-            fit: BoxFit.cover,
-          ),
-        );
-      default:
-        return const BoxDecoration(color: Colors.white);
-    }
-  }
-
   Color _getTextColor() {
     switch (widget.style) {
       case MessageStyle.soieArdente:
         return Colors.amber;
-      case MessageStyle.feuilleClassique:
       case MessageStyle.voileDeSoie:
+      case MessageStyle.feuilleClassique:
         return Colors.white;
       default:
         return Colors.black;
@@ -106,24 +56,14 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
   }
 
   Color _getSignatureColor() {
-    switch (widget.style) {
-      case MessageStyle.soieArdente:
-        return Colors.amber;
-      case MessageStyle.feuilleClassique:
-      case MessageStyle.voileDeSoie:
-        return Colors.white;
-      default:
-        return Colors.grey;
-    }
+    return _getTextColor().withOpacity(0.7);
   }
 
   Color _getSignatureBackgroundColor() {
     switch (widget.style) {
       case MessageStyle.soieArdente:
-        return Colors.black.withOpacity(0.6);
-      case MessageStyle.feuilleClassique:
       case MessageStyle.voileDeSoie:
-        return Colors.grey.shade900.withOpacity(0.7);
+        return Colors.black.withOpacity(0.6);
       case MessageStyle.parcheminDAntan:
       case MessageStyle.ecritVintage:
       case MessageStyle.rouleauScelle:
@@ -144,9 +84,12 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
         backgroundColor: Colors.black,
       ),
       body: Container(
-        decoration: _buildDecoration(),
-        width: double.infinity,
-        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(widget.style.assetPath),
+            fit: BoxFit.cover,
+          ),
+        ),
         child: GestureDetector(
           onTap: () => setState(() => _showSignature = !_showSignature),
           child: Padding(
@@ -158,13 +101,10 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
                     child: AnimatedBuilder(
                       animation: _animation,
                       builder: (ctx, child) {
-                        final totalLen = widget.text.length;
-                        final currentLen =
-                            (totalLen * _animation.value).floor();
-                        final visibleText = widget.text.substring(
-                          0,
-                          currentLen,
-                        );
+                        final visibleLen =
+                            (_animation.value * widget.text.length).floor();
+                        final visibleText =
+                            widget.text.substring(0, visibleLen);
                         return SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
@@ -185,26 +125,26 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
                 if (_showSignature)
                   widget.manualSignatureBase64 != null
                       ? Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _getSignatureBackgroundColor(),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Image.memory(
-                          base64Decode(widget.manualSignatureBase64!),
-                          height: 50,
-                          fit: BoxFit.contain,
-                        ),
-                      )
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _getSignatureBackgroundColor(),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Image.memory(
+                            base64Decode(widget.manualSignatureBase64!),
+                            height: 60,
+                            fit: BoxFit.contain,
+                          ),
+                        )
                       : Text(
-                        widget.signature,
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: sigColor,
-                          fontWeight: FontWeight.bold,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      )
+                          widget.signature,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: sigColor,
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
                 else
                   const Text(
                     "Touchez pour révéler la signature",
@@ -214,6 +154,61 @@ class _PlumeSecreteScreenState extends State<PlumeSecreteScreen>
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pushNamed(context, '/kinksphere');
+                    ElevatedButton(
+                      onPressed: () {
+                        // 1. Redirection
+                        Navigator.pushNamed(context, '/kinksphere');
+
+                        // 2. Notif (snackbar)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Votre Plume Secrète a été remise à son destinataire.\nElle ne pourra pas être relue.",
+                              style: TextStyle(fontStyle: FontStyle.italic),
+                            ),
+                            duration: Duration(seconds: 4),
+                            backgroundColor: Colors.black87,
+                          ),
+                        );
+                        // 3. Popup "s’est envolée"
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            backgroundColor: Colors.black,
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.local_fire_department,
+                                    color: Colors.redAccent, size: 48),
+                                SizedBox(height: 12),
+                                Text(
+                                  "Votre Plume s’est envolée…",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 32),
+                      ),
+                      child: const Text(
+                        "ENVOYER",
+                        style: TextStyle(
+                          fontFamily: 'DancingScript',
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,

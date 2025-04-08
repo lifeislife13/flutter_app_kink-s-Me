@@ -1,56 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:kinksme/theme_provider.dart';
-import 'package:kinksme/firebase_options.dart';
-import 'package:kinksme/models/message_style.dart';
+import 'firebase_options.dart';
+import 'theme_provider.dart';
+import 'services/firebase_notification_service.dart';
 
-import 'package:kinksme/screens/about_screen.dart';
-import 'package:kinksme/screens/agenda_secret_screen.dart';
-import 'package:kinksme/screens/age_check_screen.dart';
-import 'package:kinksme/screens/boudoir_screen.dart';
-import 'package:kinksme/screens/boutique_screen.dart';
-import 'package:kinksme/screens/cercle_des_murmures_screen.dart';
-import 'package:kinksme/screens/chat_and_messaging_screen.dart';
-import 'package:kinksme/screens/forgot_password_screen.dart';
-import 'package:kinksme/screens/geolocation_screen.dart';
-import 'package:kinksme/screens/glossary_screen.dart';
-import 'package:kinksme/screens/home_screen.dart';
-import 'package:kinksme/screens/journal_brulant_screen.dart';
-import 'package:kinksme/screens/kink_elegance_screen.dart';
-import 'package:kinksme/screens/ma_kinksphere_screen.dart';
-import 'package:kinksme/screens/map_screen.dart';
-import 'package:kinksme/screens/missive_screen.dart';
-import 'package:kinksme/screens/notifications_screen.dart';
-import 'package:kinksme/screens/plume_secrete_screen.dart';
-import 'package:kinksme/screens/presentation_screen.dart';
-import 'package:kinksme/screens/profile_menu_screen.dart';
-import 'package:kinksme/screens/profile_screen.dart';
-import 'package:kinksme/screens/profile_setup_screen.dart';
-import 'package:kinksme/screens/register_screen.dart';
-import 'package:kinksme/screens/settings_screen.dart';
-import 'package:kinksme/screens/terms_screen.dart';
-import 'package:kinksme/screens/plan_site_screen.dart';
+// Import screens & models
+import 'models/message_style.dart';
+import 'screens/about_screen.dart';
+import 'screens/account_screen.dart';
+import 'screens/agenda_secret_screen.dart';
+import 'screens/age_check_screen.dart';
+import 'screens/boudoir_editor_screen.dart';
+import 'screens/boudoir_screen.dart';
+import 'screens/boutique_screen.dart';
+import 'screens/cercle_des_murmures_screen.dart';
+import 'screens/chat_and_messaging_screen.dart';
+import 'screens/feedback_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/geolocation_screen.dart';
+import 'screens/glossary_screen.dart';
+import 'screens/highlighted_kinks_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/journal_brulant_screen.dart';
+import 'screens/kink_elegance_screen.dart';
+import 'screens/ma_kinksphere_screen.dart';
+import 'screens/map_screen.dart';
+import 'screens/missive_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/plan_site_screen.dart';
+import 'screens/plume_secrete_screen.dart';
+import 'screens/presentation_screen.dart';
+import 'screens/profile_menu_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/profile_setup_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/terms_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint("Message en arrière-plan : \${message.messageId}");
+  debugPrint("🔔 Message en arrière-plan : ${message.messageId}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // 🛡️ Activer AppCheck selon environnement
+  const debugToken = String.fromEnvironment('FIREBASE_APPCHECK_DEBUG_TOKEN');
+
   await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
+    androidProvider: debugToken.isNotEmpty
+        ? AndroidProvider.debug
+        : AndroidProvider.playIntegrity,
     appleProvider: AppleProvider.debug,
   );
+
+  // 🔐 Debug Auth & AppCheck
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    debugPrint("🔐 Utilisateur Firebase Auth : $user");
+
+    final token = await FirebaseAppCheck.instance.getToken(true);
+    debugPrint("🧪 Token AppCheck : $token");
+  } catch (e) {
+    debugPrint("❌ Erreur AppCheck : $e");
+  }
+
+  if (debugToken.isNotEmpty) {
+    debugPrint("🆔 Token Debug à coller dans Firebase Console : $debugToken");
+  }
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -70,71 +96,25 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
-
-  static const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'high_importance_channel',
-    'Notifications de haute importance',
-    description: 'Notifications importantes pour Kink\'s Me',
-    importance: Importance.high,
-  );
-
   @override
   void initState() {
     super.initState();
-    _initializeLocalNotifications();
-    _setupFirebaseMessaging();
-  }
 
-  Future<void> _initializeLocalNotifications() async {
-    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    const AndroidInitializationSettings initSettingsAndroid =
-        AndroidInitializationSettings('ic_stat_kinksme');
-    const InitializationSettings initSettings = InitializationSettings(
-      android: initSettingsAndroid,
-    );
-    await flutterLocalNotificationsPlugin.initialize(initSettings);
-    final androidPlatform =
-        flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-    await androidPlatform?.createNotificationChannel(channel);
-  }
-
-  Future<void> _setupFirebaseMessaging() async {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showLocalNotification(message);
+    // 🔥 Ecoute l’état Auth pour déclencher Firebase App Check
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      debugPrint("🔐 Utilisateur connecté : ${user != null}");
     });
-  }
 
-  Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'high_importance_channel',
-          'Notifications de haute importance',
-          channelDescription: 'Notifications importantes pour Kink\'s Me',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: false,
-        );
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      message.notification?.title,
-      message.notification?.body,
-      details,
-      payload: 'Default_Sound',
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FirebaseNotificationService.initialize(context);
+    });
   }
 
   Future<Widget> _getInitialScreen() async {
     final prefs = await SharedPreferences.getInstance();
     final seenHome = prefs.getBool('seenHome') ?? false;
-    final seenRegister = prefs.getBool('seenRegister') ?? false;
     final seenPresentation = prefs.getBool('seenPresentation') ?? false;
+    final seenRegister = prefs.getBool('seenRegister') ?? false;
     final seenSetup = prefs.getBool('seenSetup') ?? false;
 
     if (!seenHome) return const AgeCheckScreen();
@@ -147,6 +127,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: "Kink's Me 🚀",
       debugShowCheckedModeBanner: false,
@@ -154,13 +135,12 @@ class _MyAppState extends State<MyApp> {
       home: FutureBuilder<Widget>(
         future: _getInitialScreen(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState != ConnectionState.done) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
-          } else {
-            return snapshot.data ?? const ProfileMenuScreen();
           }
+          return snapshot.data ?? const ProfileMenuScreen();
         },
       ),
       onGenerateRoute: _generateRoute,
@@ -168,8 +148,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Route<dynamic> _generateRoute(RouteSettings settings) {
+    final name = settings.name;
+    final args = settings.arguments;
     Widget page;
-    switch (settings.name) {
+
+    switch (name) {
       case '/presentation':
         page = const PresentationScreen();
         break;
@@ -178,6 +161,9 @@ class _MyAppState extends State<MyApp> {
         break;
       case '/forgotPassword':
         page = const ForgotPasswordScreen();
+        break;
+      case '/boudoirEditor':
+        page = const BoudoirEditorScreen();
         break;
       case '/profileSetup':
         page = const ProfileSetupScreen();
@@ -190,6 +176,15 @@ class _MyAppState extends State<MyApp> {
         break;
       case '/map':
         page = const MapScreen();
+        break;
+      case '/highlightedKinks':
+        page = const HighlightedKinksScreen();
+        break;
+      case '/feedback':
+        page = const FeedbackScreen();
+        break;
+      case '/account':
+        page = const AccountScreen();
         break;
       case '/chat':
         page = const ChatAndMessagingScreen(
@@ -238,14 +233,6 @@ class _MyAppState extends State<MyApp> {
       case '/kinkElegance':
         page = const KinkEleganceScreen();
         break;
-      case '/missive':
-        final args = settings.arguments as Map<String, dynamic>;
-        page = MissiveScreen(
-          message: args['message'] as String,
-          signature: args['signature'] as String,
-          style: args['style'] as MessageStyle? ?? MessageStyle.parcheminDAntan,
-        );
-        break;
       case '/notifications':
         page = const NotificationsScreen();
         break;
@@ -258,24 +245,34 @@ class _MyAppState extends State<MyApp> {
       case '/planSite':
         page = const PlanDuSiteScreen();
         break;
+      case '/missive':
+        final mArgs = args as Map<String, dynamic>? ?? {};
+        page = MissiveScreen(
+          message: mArgs['message'] ?? '',
+          signature: mArgs['signature'] ?? '',
+          style: MessageStyle.values.firstWhere(
+            (e) => e.toString() == mArgs['style'],
+            orElse: () => MessageStyle.parcheminDAntan,
+          ),
+        );
+        break;
       case '/plumeSecrete':
-        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final pArgs = args as Map<String, dynamic>? ?? {};
         final style = MessageStyle.values.firstWhere(
-          (e) => e.toString() == args['style'],
+          (e) => e.toString() == pArgs['style'],
           orElse: () => MessageStyle.parcheminDAntan,
         );
         page = PlumeSecreteScreen(
-          text: args['text'] ?? "",
-          signature: args['signature'] ?? "",
+          text: pArgs['text'] ?? "",
+          signature: pArgs['signature'] ?? "",
           style: style,
-          manualSignatureBase64: args['manualSignatureBase64'],
+          manualSignatureBase64: pArgs['manualSignatureBase64'],
         );
         break;
-
       default:
         page = const ProfileMenuScreen();
     }
 
-    return MaterialPageRoute(builder: (ctx) => page, settings: settings);
+    return MaterialPageRoute(builder: (_) => page, settings: settings);
   }
 }

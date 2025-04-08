@@ -7,17 +7,18 @@ class PersonnalisationDialog extends StatefulWidget {
   final MessageStyle initialStyle;
   final String initialSignature;
   final String? initialManualSignatureBase64;
+  final bool isPremium;
   final void Function(
     String signatureText,
     MessageStyle style,
     String? signatureImage,
-  )
-  onConfirmed;
+  ) onConfirmed;
 
   const PersonnalisationDialog({
     super.key,
     required this.initialStyle,
     required this.initialSignature,
+    required this.isPremium,
     required this.onConfirmed,
     this.initialManualSignatureBase64,
   });
@@ -36,9 +37,8 @@ class _PersonnalisationDialogState extends State<PersonnalisationDialog> {
   void initState() {
     super.initState();
     _style = widget.initialStyle;
-    _signatureTextController = TextEditingController(
-      text: widget.initialSignature,
-    );
+    _signatureTextController =
+        TextEditingController(text: widget.initialSignature);
     _manualSignatureBase64 = widget.initialManualSignatureBase64;
     _signatureController = SignatureController(
       penStrokeWidth: 2,
@@ -84,8 +84,7 @@ class _PersonnalisationDialogState extends State<PersonnalisationDialog> {
                   final bytes = await _signatureController.toPngBytes();
                   if (bytes != null) {
                     setState(
-                      () => _manualSignatureBase64 = base64Encode(bytes),
-                    );
+                        () => _manualSignatureBase64 = base64Encode(bytes));
                   }
                 }
                 Navigator.of(context).pop();
@@ -102,30 +101,71 @@ class _PersonnalisationDialogState extends State<PersonnalisationDialog> {
     );
   }
 
+  void _handleStyleChange(MessageStyle style) {
+    final isLocked = _isStylePremium(style) && !widget.isPremium;
+    if (isLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Ce style est réservé aux membres Premium 🔒"),
+        ),
+      );
+    } else {
+      setState(() => _style = style);
+    }
+  }
+
+  bool _isStylePremium(MessageStyle style) {
+    return [
+      MessageStyle.veloursNoir,
+      MessageStyle.feuilleOr,
+      MessageStyle.plumeRouge,
+      MessageStyle.shibari,
+      MessageStyle.chaine,
+      MessageStyle.collier,
+    ].contains(style);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Personnaliser votre journal"),
+      backgroundColor: Colors.black87,
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Choisissez un style :"),
+            const Text("Choisissez un style :",
+                style: TextStyle(color: Colors.white70)),
             ...MessageStyle.values.map(
-              (style) => RadioListTile<MessageStyle>(
-                title: Text(style.name),
-                value: style,
-                groupValue: _style,
-                onChanged: (value) => setState(() => _style = value!),
-              ),
+              (style) {
+                final isLocked = _isStylePremium(style) && !widget.isPremium;
+                return RadioListTile<MessageStyle>(
+                  title: Text(
+                    style.label + (isLocked ? " 🔒" : ""),
+                    style: TextStyle(
+                      color: isLocked ? Colors.white54 : Colors.white,
+                      fontStyle: isLocked ? FontStyle.italic : FontStyle.normal,
+                    ),
+                  ),
+                  value: style,
+                  groupValue: _style,
+                  onChanged: (_) => _handleStyleChange(style),
+                );
+              },
             ),
+            const Divider(color: Colors.white24),
             TextField(
               controller: _signatureTextController,
-              decoration: const InputDecoration(labelText: "Signature texte"),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: "Signature texte",
+                labelStyle: TextStyle(color: Colors.white70),
+              ),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _openSignaturePad,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               child: const Text("Signer manuellement"),
             ),
           ],
@@ -134,7 +174,7 @@ class _PersonnalisationDialogState extends State<PersonnalisationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text("Annuler"),
+          child: const Text("Annuler", style: TextStyle(color: Colors.white)),
         ),
         TextButton(
           onPressed: () {
@@ -145,7 +185,7 @@ class _PersonnalisationDialogState extends State<PersonnalisationDialog> {
             );
             Navigator.of(context).pop();
           },
-          child: const Text("Valider"),
+          child: const Text("Valider", style: TextStyle(color: Colors.amber)),
         ),
       ],
     );
