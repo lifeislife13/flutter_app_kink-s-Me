@@ -1,19 +1,62 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import * as nodemailer from "nodemailer";
 
-import {onRequest} from "firebase-functions/v2/https";
-import * as logger from "firebase-functions/logger";
+admin.initializeApp();
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+const gmailEmail = "contactkinksme@gmail.com";
+const gmailPassword = "TON_MDP_APP_GMAIL"; // mot de passe d’application sécurisé
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: gmailEmail,
+    pass: gmailPassword,
+  },
+});
+
+export const sendPremiumReminderNow = functions.https.onRequest(async (_req, res) => {
+  const snapshot = await admin.firestore().collection("users").get();
+  const now = new Date();
+  const jMoins1 = new Date(now);
+  jMoins1.setDate(jMoins1.getDate() + 1);
+
+  let count = 0;
+
+  for (const doc of snapshot.docs) {
+    const user = doc.data();
+    const email = user.email;
+    const premiumUntil = user.premiumUntil ? user.premiumUntil.toDate() : null;
+
+
+    if (!email || !premiumUntil) continue;
+
+    const isMatch =
+      premiumUntil.getDate() === jMoins1.getDate() &&
+      premiumUntil.getMonth() === jMoins1.getMonth() &&
+      premiumUntil.getFullYear() === jMoins1.getFullYear();
+
+    if (isMatch) {
+      const mailOptions = {
+        from: `Kink's Me 🔥 <${gmailEmail}>`,
+        to: email,
+        subject: "🔥 Votre accès Premium expire bientôt",
+        html: `
+          <p>Bonjour,</p>
+          <p>Votre accès Premium expire dans moins de 24h.</p>
+          <p><a href="https://kinksme.app/boutique">Renouvelez ici</a>.</p>
+        `,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        count++;
+        console.log(`✅ Email envoyé à ${email}`);
+      } catch (error) {
+        console.error(`❌ Erreur en envoyant à ${email}:`, error);
+      }
+    }
+  }
+
+  res.status(200).send(`${count} email(s) envoyés.`);
+});
