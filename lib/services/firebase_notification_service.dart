@@ -21,11 +21,19 @@ class FirebaseNotificationService {
   /// Initialise Firebase Messaging + Local Notifications
   static Future<void> initialize(BuildContext context) async {
     // 🔐 Autorisation des notifications (iOS / Android 13+)
-    await FirebaseMessaging.instance.requestPermission(
+    final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+
+    // ✅ Abonnement automatique au topic "allUsers" si autorisé
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      await FirebaseMessaging.instance.subscribeToTopic("allUsers");
+      debugPrint("✅ Abonné au topic allUsers");
+    } else {
+      debugPrint("🚫 Autorisation refusée pour les notifications");
+    }
 
     // 📲 Récupération du token FCM
     final token = await FirebaseMessaging.instance.getToken();
@@ -50,11 +58,10 @@ class FirebaseNotificationService {
     // 👂 Listener pour les messages reçus quand l’app est ouverte
     FirebaseMessaging.onMessage.listen(_handleForegroundNotification);
 
-// Lorsque l’utilisateur clique sur une notification (app en background ou kill)
+    // 🚪 Lorsque l’utilisateur clique sur une notification (app en background ou kill)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint("📬 Notification ouverte depuis l’arrière-plan");
 
-      // Par exemple : redirection vers une page si un champ custom est présent
       final route = message.data['route'];
       if (route != null && context.mounted) {
         Navigator.pushNamed(context, route);

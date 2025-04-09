@@ -4,9 +4,9 @@ import nodemailer from "nodemailer";
 
 admin.initializeApp();
 
-// 💌 Adresse et mot de passe d'application Gmail
+// 💌 Config Gmail
 const gmailEmail = "contactkinksme@gmail.com";
-const gmailPassword = "thmq jtee icbe flzj"; // ← mets ici ton mot de passe d'application mis à jour
+const gmailPassword = "thmq jtee icbe flzj";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -16,11 +16,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// 🔔 Envoi des emails de rappel
 async function sendReminderEmails(): Promise<number> {
   const snapshot = await admin.firestore().collection("users").get();
   const now = new Date();
   const jMoins1 = new Date(now);
-  jMoins1.setDate(jMoins1.getDate() + 1); // 🔔 On cible les abonnements qui expirent dans 24h
+  jMoins1.setDate(jMoins1.getDate() + 1);
 
   let count = 0;
 
@@ -61,7 +62,7 @@ async function sendReminderEmails(): Promise<number> {
   return count;
 }
 
-// ✅ 1. Fonction manuelle (test dans le navigateur)
+// ✅ 1. Fonction manuelle
 export const sendPremiumReminderNow = functions.https.onRequest(async (_req, res) => {
   const count = await sendReminderEmails();
   res.status(200).send(`
@@ -70,8 +71,34 @@ export const sendPremiumReminderNow = functions.https.onRequest(async (_req, res
   `);
 });
 
-// ✅ 2. Fonction planifiée (automatique chaque jour à 8h UTC → 10h FR)
-export const sendPremiumReminder = functions.pubsub.schedule("every day 08:00").timeZone("Europe/Paris").onRun(async () => {
-  const count = await sendReminderEmails();
-  console.log(`⏰ Envoi planifié terminé : ${count} email(s) envoyés`);
-});
+// ✅ 2. Fonction planifiée (tous les jours à 10h FR)
+export const sendPremiumReminder = functions.pubsub
+  .schedule("every day 08:00")
+  .timeZone("Europe/Paris")
+  .onRun(async () => {
+    const count = await sendReminderEmails();
+    console.log(`⏰ Envoi planifié terminé : ${count} email(s) envoyés`);
+  });
+
+// ✅ 3. 🔔 Notification à tous dès qu’un message est ajouté dans Firestore
+export const notifyOnNewMessage = functions.firestore
+  .document("messages/{messageId}") // ← à adapter si ta collection a un autre nom
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    const content = data?.text || "📨 Nouveau message reçu";
+
+    const payload: admin.messaging.MessagingPayload = {
+      notification: {
+        title: "💬 Nouveau message sur Kink's Me",
+        body: content,
+        clickAction: "FLUTTER_NOTIFICATION_CLICK",
+      },
+    };
+
+    try {
+      await admin.messaging().sendToTopic("allUsers", payload);
+      console.log("✅ Notification envoyée à tous les utilisateurs.");
+    } catch (err) {
+      console.error("❌ Erreur lors de l’envoi de la notif", err);
+    }
+  });

@@ -46,14 +46,19 @@ import 'screens/terms_screen.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint("🔔 Message en arrière-plan : ${message.messageId}");
+  print("🔔 [BG] Message reçu : ${message.notification?.title}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // 🛡️ Activer AppCheck selon environnement
+  // 📲 Notifs BG
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // 🔐 AppCheck sécurisé ou debug
   const debugToken = String.fromEnvironment('FIREBASE_APPCHECK_DEBUG_TOKEN');
 
   await FirebaseAppCheck.instance.activate(
@@ -63,22 +68,24 @@ void main() async {
     appleProvider: AppleProvider.debug,
   );
 
-  // 🔐 Debug Auth & AppCheck
+  // 🔍 Logs de debug utiles
   try {
     final user = FirebaseAuth.instance.currentUser;
     debugPrint("🔐 Utilisateur Firebase Auth : $user");
 
     final token = await FirebaseAppCheck.instance.getToken(true);
     debugPrint("🧪 Token AppCheck : $token");
+
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    debugPrint("📲 FCM Token : $fcmToken");
   } catch (e) {
-    debugPrint("❌ Erreur AppCheck : $e");
+    debugPrint("❌ Erreur AppCheck / FCM : $e");
   }
 
   if (debugToken.isNotEmpty) {
-    debugPrint("🆔 Token Debug à coller dans Firebase Console : $debugToken");
+    debugPrint(
+        "🆔 Token Debug à copier dans la Console Firebase : $debugToken");
   }
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(
     ChangeNotifierProvider(
@@ -100,11 +107,15 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
 
-    // 🔥 Ecoute l’état Auth pour déclencher Firebase App Check
+    // 🔥 Auth check
     FirebaseAuth.instance.authStateChanges().listen((user) {
       debugPrint("🔐 Utilisateur connecté : ${user != null}");
     });
 
+    // ✅ Permission pour notifs
+    FirebaseMessaging.instance.requestPermission();
+
+    // 🔔 Listener pour les notifs en foreground
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FirebaseNotificationService.initialize(context);
     });
