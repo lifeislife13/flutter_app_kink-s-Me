@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 🔔 Envoi des emails de rappel
+// 🔔 Envoi des emails de rappel premium
 async function sendReminderEmails(): Promise<number> {
   const snapshot = await admin.firestore().collection("users").get();
   const now = new Date();
@@ -80,25 +80,25 @@ export const sendPremiumReminder = functions.pubsub
     console.log(`⏰ Envoi planifié terminé : ${count} email(s) envoyés`);
   });
 
-// ✅ 3. 🔔 Notification à tous dès qu’un message est ajouté dans Firestore
+// ✅ 3. 🔔 Notification FCM : nouvel élément dans Firestore
 export const notifyOnNewMessage = functions.firestore
-  .document("messages/{messageId}") // ← à adapter si ta collection a un autre nom
+  .document("messages/{messageId}") // ← adapte ici si ta collection est nommée autrement
   .onCreate(async (snap, context) => {
     const data = snap.data();
     const content = data?.text || "📨 Nouveau message reçu";
 
-    const payload: admin.messaging.MessagingPayload = {
+    const payload: admin.messaging.Message = {
       notification: {
-        title: "💬 Nouveau message sur Kink's Me",
+        title: "💬 Nouveau message dans Kink's Me",
         body: content,
-        clickAction: "FLUTTER_NOTIFICATION_CLICK",
       },
+      topic: "allUsers",
     };
 
     try {
-      await admin.messaging().sendToTopic("allUsers", payload);
-      console.log("✅ Notification envoyée à tous les utilisateurs.");
+      await admin.messaging().send(payload);
+      console.log("✅ Notification envoyée à tous via FCM.");
     } catch (err) {
-      console.error("❌ Erreur lors de l’envoi de la notif", err);
+      console.error("❌ Erreur d’envoi de la notif :", err);
     }
   });
